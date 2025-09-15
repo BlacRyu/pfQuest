@@ -55,6 +55,7 @@ local minimap_zoom = {
           [5] = 133 + 1/3,
         },
 }
+local mainmap_inversescale = 1.0
 
 local unifiedcache = {}
 
@@ -839,6 +840,9 @@ function pfMap:UpdateNode(frame, node, color, obj, distance)
 
   -- set default sizes for different node types
   frame.defsize = (frame.cluster or frame.layer == 4) and 18 or 14
+  if (obj ~= "minimap") then
+    frame.defsize = frame.defsize * mainmap_inversescale
+  end
 
   -- make the current route target visible
   if target then frame.hl:Show() else frame.hl:Hide() end
@@ -1145,3 +1149,24 @@ if compat.client >= 30300 then
     end
   end
 end
+
+-- Resize icons on map zoom change
+function pfMap:OnMapScaleChanged(frame, scale, hookedfunction)
+  hookedfunction(frame, scale)
+
+  local new_inversescale = 1.0 / WorldMapButton:GetEffectiveScale()
+  if (mainmap_inversescale ~= new_inversescale) then
+    mainmap_inversescale = new_inversescale
+    pfMap:UpdateNodes()
+  end
+end
+-- Listen for WorldMapFrame scale changes
+local pfHookWorldMapFrame_SetScale = WorldMapFrame.SetScale
+WorldMapFrame.SetScale = function(frame, scale) pfMap:OnMapScaleChanged(frame, scale, pfHookWorldMapFrame_SetScale) end
+-- Listen for WorldMapDetailFrame scale changes
+local pfHookWorldMapDetailFrame_SetScale = WorldMapDetailFrame.SetScale
+WorldMapDetailFrame.SetScale = function(frame, scale) pfMap:OnMapScaleChanged(frame, scale, pfHookWorldMapDetailFrame_SetScale) end
+-- Listen for WorldMapButton scale changes
+local pfHookWorldMapButton_SetScale = WorldMapButton.SetScale
+WorldMapButton.SetScale = function(frame, scale) pfMap:OnMapScaleChanged(frame, scale, pfHookWorldMapButton_SetScale) end
+
