@@ -840,8 +840,15 @@ function pfMap:UpdateNode(frame, node, color, obj, distance)
 
   -- set default sizes for different node types
   frame.defsize = (frame.cluster or frame.layer == 4) and 18 or 14
+  -- Adjust node size if main map is zoomed in/out
   if (obj ~= "minimap") then
-    frame.defsize = frame.defsize * mainmap_inversescale
+    if (frame.title and pfQuest.icons[frame.title]) or frame.icon then
+      -- Adjust for icons being 1 unit smaller than their parent frame
+      -- Looks better to keep the icon size constant even if the frame grows a bit.
+      frame.defsize = (frame.defsize - 2) * (mainmap_inversescale) + 2
+    else
+      frame.defsize = frame.defsize * mainmap_inversescale
+    end
   end
 
   -- make the current route target visible
