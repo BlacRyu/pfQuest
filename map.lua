@@ -719,6 +719,43 @@ function pfMap:BuildNode(name, parent)
   return f
 end
 
+function pfMap:ResizeNode(frame, obj)
+  local highlight = frame.texture and pfMap.highlightdb[frame][pfMap.highlight] and true or nil
+  local target = frame.texture and pfQuest.route and pfQuest.route.IsTarget(frame) or nil
+
+  -- set default sizes for different node types
+  frame.defsize = (frame.cluster or frame.layer == 4) and 18 or 14
+  -- Adjust node size if main map is zoomed in/out
+  if (obj ~= "minimap") then
+    if (frame.title and pfQuest.icons[frame.title]) or frame.icon then
+      -- Adjust for icons being 1 unit smaller than their parent frame
+      -- Looks better to keep the icon size constant even if the frame grows a bit.
+      frame.defsize = (frame.defsize - 2) * (mainmap_inversescale) + 2
+    else
+      frame.defsize = frame.defsize * mainmap_inversescale
+    end
+  end
+
+  -- make the current route target visible
+  if target then frame.hl:Show() else frame.hl:Hide() end
+
+  -- reset frame size except for highlights
+  if not highlight then
+    frame:SetWidth(frame.defsize)
+    frame:SetHeight(frame.defsize)
+  end
+end
+
+function pfMap:ResizeNodes()
+  local i = 1
+  if pfMap.pins then
+    while pfMap.pins[i] and pfMap.pins[i]:IsShown() do
+      pfMap:ResizeNode(pfMap.pins[i])
+      i = i + 1
+    end
+  end
+end
+
 pfMap.highlightdb = {}
 function pfMap:UpdateNode(frame, node, color, obj, distance)
   -- clear node to title association table
@@ -835,30 +872,7 @@ function pfMap:UpdateNode(frame, node, color, obj, distance)
     frame:SetScript("OnClick", (frame.func or pfMap.NodeClick))
   end
 
-  local highlight = frame.texture and pfMap.highlightdb[frame][pfMap.highlight] and true or nil
-  local target = frame.texture and pfQuest.route and pfQuest.route.IsTarget(frame) or nil
-
-  -- set default sizes for different node types
-  frame.defsize = (frame.cluster or frame.layer == 4) and 18 or 14
-  -- Adjust node size if main map is zoomed in/out
-  if (obj ~= "minimap") then
-    if (frame.title and pfQuest.icons[frame.title]) or frame.icon then
-      -- Adjust for icons being 1 unit smaller than their parent frame
-      -- Looks better to keep the icon size constant even if the frame grows a bit.
-      frame.defsize = (frame.defsize - 2) * (mainmap_inversescale) + 2
-    else
-      frame.defsize = frame.defsize * mainmap_inversescale
-    end
-  end
-
-  -- make the current route target visible
-  if target then frame.hl:Show() else frame.hl:Hide() end
-
-  -- reset frame size except for highlights
-  if not highlight then
-    frame:SetWidth(frame.defsize)
-    frame:SetHeight(frame.defsize)
-  end
+  pfMap:ResizeNode(frame, obj)
 
   frame.node = node
 end
@@ -1164,7 +1178,8 @@ function pfMap:OnMapScaleChanged(frame, scale, hookedfunction)
   local new_inversescale = 1.0 / WorldMapButton:GetEffectiveScale()
   if (mainmap_inversescale ~= new_inversescale) then
     mainmap_inversescale = new_inversescale
-    pfMap:UpdateNodes()
+    -- pfMap:UpdateNodes()
+    pfMap:ResizeNodes()
   end
 end
 -- Listen for WorldMapFrame scale changes
